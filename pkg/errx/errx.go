@@ -24,6 +24,6 @@ func WithContextErr(err error, ctx error) error {
 	return fmt.Errorf("%w: %w", ctx, err)
 }
 
-func IsContext(err error) bool {
+func IsContextual(err error) bool {
 	return OneOf(err, context.Canceled, context.DeadlineExceeded)
 }

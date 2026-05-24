@@ -23,7 +23,7 @@ func (s *Service) RunAssignLoop(parent context.Context) error {
 
 		go func() {
 			err = s.doMap(parent, workerKey, taskKey)
-			if err != nil && (!errx.IsContext(err) || !ctxx.Expired(parent)) {
+			if err != nil && (!errx.IsContextual(err) || !ctxx.Expired(parent)) {
 				logx.Warnf("a map task failed: %s", err.Error())
 			}
 		}()
