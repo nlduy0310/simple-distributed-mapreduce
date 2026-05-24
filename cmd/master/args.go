@@ -26,6 +26,7 @@ var (
 	inputPattern string
 	// operations
 	maxWorkers int
+	mapTimeout time.Duration
 )
 
 func prepArguments() {
@@ -39,15 +40,16 @@ func prepArguments() {
 	flag.StringVar(&inputPattern, "input", "", "input files glob pattern relative to NFS root")
 
 	flag.IntVar(&maxWorkers, "max-workers", 100, "maximum number of workers")
+	flag.DurationVar(&mapTimeout, "map-timeout", 60*time.Second, "timeout of map task")
 
 	flag.Parse()
 
-	if err := validateDirectArguments(); err != nil {
+	if err := validateArguments(); err != nil {
 		exit1(errx.WithContext(err, "validate arguments"))
 	}
 }
 
-func validateDirectArguments() error {
+func validateArguments() error {
 	switch {
 	case port <= 0:
 		return errors.New("invalid port")
@@ -57,6 +59,10 @@ func validateDirectArguments() error {
 		return require("NFS root")
 	case len(inputPattern) == 0:
 		return require("input pattern")
+	case maxWorkers <= 0:
+		return invalid("max workers")
+	case mapTimeout <= 0:
+		return invalid("map timeout")
 	default:
 		return nil
 	}
@@ -64,6 +70,10 @@ func validateDirectArguments() error {
 
 func require(name string) error {
 	return fmt.Errorf("%s must be provided", name)
+}
+
+func invalid(name string) error {
+	return fmt.Errorf("invalid %s", name)
 }
 
 func exit1(err error) {

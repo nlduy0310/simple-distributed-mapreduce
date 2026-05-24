@@ -55,7 +55,7 @@ func (s *Service) Ping(context.Context, *rpcv1.PingRequest) (*rpcv1.PingResponse
 
 func (s *Service) Map(_ context.Context, req *rpcv1.MapRequest) (*rpcv1.MapResponse, error) {
 	logx.Infof("received task map for %s", req.NfsPath)
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
 	// TODO start map
 	return &rpcv1.MapResponse{Ok: true}, nil
 }

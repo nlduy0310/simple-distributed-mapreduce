@@ -47,6 +47,7 @@ opts=(
     --healthy-duration 10s
     --nfs-root "$(pwd)/${rel_nfs_root}"
     --input "**/*.txt"
+    --map-timeout 1s
 )
 while true; do
     echo "starting server"

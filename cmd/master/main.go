@@ -36,7 +36,11 @@ func run() int {
 		return 1
 	}
 
-	svcConfig := master.Config{InputFiles: inputFiles, MaxWorkers: maxWorkers}
+	svcConfig := master.Config{
+		InputFiles: inputFiles,
+		MaxWorkers: maxWorkers,
+		MapTimeout: mapTimeout,
+	}
 	svc, err := master.NewService(svcConfig)
 	if err != nil {
 		logx.Err(errx.WithContext(err, "configure service"))

@@ -26,13 +26,16 @@ func (s *Service) RunAssignLoop(parent context.Context) error {
 	return nil
 }
 
-func (s *Service) doMap(ctx context.Context, workerName, taskPath string) {
+func (s *Service) doMap(parent context.Context, workerName, taskPath string) {
 	defer s.releaseWorker(workerName)
+
+	ctx, cancel := context.WithTimeout(parent, s.Config.MapTimeout)
+	defer cancel()
 
 	found, err := s.reg.doMap(ctx, workerName, taskPath)
 	if !found {
 		logx.Warnf("received free worker key %s but was not found", workerName)
-	} else if err != nil && (!errx.OneOf(err, context.Canceled, context.DeadlineExceeded) || ctx.Err() == nil) {
+	} else if err != nil && (!errx.OneOf(err, context.Canceled, context.DeadlineExceeded) || parent.Err() == nil) {
 		logx.Warnf("a map task failed: %s", err.Error())
 	}
 }
