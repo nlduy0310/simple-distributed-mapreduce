@@ -143,6 +143,10 @@ func (r *registry) doMap(ctx context.Context, name, path string) (bool, error) {
 	return true, w.doMap(ctx, path)
 }
 
-func (r *registry) releaseWorker(name string) {
-	r.freeWorkers <- name
+func (r *registry) releaseWorker(key string) {
+	r.freeWorkers <- key
+}
+
+func (r *registry) renewTask(key string) {
+	r.pendingTasks <- key
 }

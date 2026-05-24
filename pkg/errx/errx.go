@@ -1,6 +1,7 @@
 package errx
 
 import (
+	"context"
 	"errors"
 	"fmt"
 )
@@ -21,4 +22,8 @@ func WithContext(err error, ctx string) error {
 
 func WithContextErr(err error, ctx error) error {
 	return fmt.Errorf("%w: %w", ctx, err)
+}
+
+func IsContext(err error) bool {
+	return OneOf(err, context.Canceled, context.DeadlineExceeded)
 }

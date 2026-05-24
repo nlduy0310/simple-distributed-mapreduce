@@ -90,12 +90,6 @@ func (s *Service) register(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) startMap() {
-	// TODO
-	mt, _ := s.curTask.GetMap()
-	println("starting map task on", mt.Path)
-}
-
 func randomName() string {
 	return fmt.Sprintf("worker-%03d", rand.Intn(1000))
 }

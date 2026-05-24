@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/ctxx"
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/errx"
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/logx"
 )
 
 func (s *Service) RunAssignLoop(parent context.Context) error {
 	for parent.Err() == nil {
-		taskPath, err := s.pollTask(parent)
+		taskKey, err := s.pollTask(parent)
 		if err != nil {
 			return err
 		}
@@ -20,24 +21,41 @@ func (s *Service) RunAssignLoop(parent context.Context) error {
 			return err
 		}
 
-		go s.doMap(parent, workerKey, taskPath)
+		go func() {
+			err = s.doMap(parent, workerKey, taskKey)
+			if err != nil && (!errx.IsContext(err) || !ctxx.Expired(parent)) {
+				logx.Warnf("a map task failed: %s", err.Error())
+			}
+		}()
 	}
 
 	return nil
 }
 
-func (s *Service) doMap(parent context.Context, workerName, taskPath string) {
-	defer s.releaseWorker(workerName)
+func (s *Service) doMap(parent context.Context, workerKey, taskKey string) (e error) {
+	defer s.releaseWorker(workerKey)
+	defer func() {
+		if e != nil {
+			s.reg.renewTask(taskKey)
+		}
+	}()
+
+	path, found := s.reg.taskPath(taskKey)
+	if !found {
+		return fmt.Errorf("task with key %s not found", taskKey)
+	}
 
 	ctx, cancel := context.WithTimeout(parent, s.Config.MapTimeout)
 	defer cancel()
 
-	found, err := s.reg.doMap(ctx, workerName, taskPath)
+	found, err := s.reg.doMap(ctx, workerKey, path)
 	if !found {
-		logx.Warnf("received free worker key %s but was not found", workerName)
-	} else if err != nil && (!errx.OneOf(err, context.Canceled, context.DeadlineExceeded) || parent.Err() == nil) {
-		logx.Warnf("a map task failed: %s", err.Error())
+		return fmt.Errorf("worker with key %s not found", workerKey)
+	} else if err != nil {
+		return err
 	}
+
+	return nil
 }
 
 func (s *Service) releaseWorker(workerKey string) {
@@ -47,11 +65,7 @@ func (s *Service) releaseWorker(workerKey string) {
 func (s *Service) pollTask(ctx context.Context) (string, error) {
 	select {
 	case taskKey := <-s.reg.pendingTasks:
-		path, found := s.reg.taskPath(taskKey)
-		if !found {
-			return "", fmt.Errorf("task with key %s not found", taskKey)
-		}
-		return path, nil
+		return taskKey, nil
 	case <-ctx.Done():
 		return "", ctx.Err()
 	}
