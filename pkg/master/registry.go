@@ -130,8 +130,8 @@ func (r *registry) taskPath(key string) (string, bool) {
 	return t.path(), true
 }
 
-// assignMap returns if the worker was found and if any error occurred during rpc call
-func (r *registry) assignMap(ctx context.Context, name, path string) (found bool, err error) {
+// doMap returns if the worker was found and if any error occurred during rpc call
+func (r *registry) doMap(ctx context.Context, name, path string) (bool, error) {
 	r.wmu.RLock()
 	defer r.wmu.RUnlock()
 
@@ -140,5 +140,9 @@ func (r *registry) assignMap(ctx context.Context, name, path string) (found bool
 		return false, nil
 	}
 
-	return true, w.doAssignMap(ctx, path)
+	return true, w.doMap(ctx, path)
+}
+
+func (r *registry) releaseWorker(name string) {
+	r.freeWorkers <- name
 }

@@ -45,29 +45,6 @@ func (s *Service) Heartbeat(_ context.Context, req *rpcv1.HeartbeatRequest) (*rp
 	return &rpcv1.HeartbeatResponse{Ok: true}, nil
 }
 
-func (s *Service) RunAssignLoop(ctx context.Context) {
-	for {
-		select {
-		case tk := <-s.reg.pendingTasks:
-			path, found := s.reg.taskPath(tk)
-			if !found {
-				logx.Warnf("received key %s but could not find pending task", tk)
-				continue
-			}
-
-			select {
-			case wk := <-s.reg.freeWorkers:
-				s.reg.assignMap(ctx, wk, path)
-			case <-ctx.Done():
-				return
-			}
-
-		case <-ctx.Done():
-			return
-		}
-	}
-}
-
 // PeriodicHealthcheck periodically check latest worker heartbeats and remove them if necessary
 func (s *Service) PeriodicHealthcheck(ctx context.Context, interval, healthy time.Duration) error {
 	ticker := time.NewTicker(interval)

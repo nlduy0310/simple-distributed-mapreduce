@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"path/filepath"
+	"time"
 
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/client"
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/errx"
+	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/logx"
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/task"
-	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/validate"
 	rpcv1 "github.com/nlduy0310/simple-distributed-mapreduce/rpc/v1"
 )
 
@@ -54,17 +54,9 @@ func (s *Service) Ping(context.Context, *rpcv1.PingRequest) (*rpcv1.PingResponse
 }
 
 func (s *Service) Map(_ context.Context, req *rpcv1.MapRequest) (*rpcv1.MapResponse, error) {
-	absPath := filepath.Join(s.Config.NfsRoot, req.NfsPath)
-	if err := validate.EnsureIsFile(absPath); err != nil {
-		return &rpcv1.MapResponse{Ok: false, Reason: errx.WithContext(err, fmt.Sprintf("find file %s", absPath)).Error()}, nil
-	}
-
-	if ok := s.curTask.SetMap(req.NfsPath); !ok {
-		return &rpcv1.MapResponse{Ok: false, Reason: "worker is busy"}, nil
-	}
-
-	s.startMap()
-
+	logx.Infof("received task map for %s", req.NfsPath)
+	time.Sleep(1 * time.Second)
+	// TODO start map
 	return &rpcv1.MapResponse{Ok: true}, nil
 }
 

@@ -52,7 +52,7 @@ func (w *worker) recordHeartbeat(t time.Time) {
 	w.heartbeat = t
 }
 
-func (w *worker) doAssignMap(ctx context.Context, path string) error {
+func (w *worker) doMap(ctx context.Context, path string) error {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
