@@ -15,12 +15,11 @@ import (
 	rpcv1 "github.com/nlduy0310/simple-distributed-mapreduce/rpc/v1"
 )
 
-func run() int {
+func run() error {
 	flag.Parse()
 
 	if err := validateArguments(); err != nil {
-		logx.Err(errx.WithContext(err, "configure application"))
-		return 1
+		return errx.WithContext(err, "configure application")
 	}
 
 	signalCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -30,14 +29,12 @@ func run() int {
 
 	svrConfig, err := server.NewConfig(port, advertiseAddr)
 	if err != nil {
-		logx.Err(errx.WithContext(err, "init server config"))
-		return 1
+		return errx.WithContext(err, "init server config")
 	}
 
 	svr, err := server.New(svrConfig)
 	if err != nil {
-		logx.Err(errx.WithContext(err, "configure server"))
-		return 1
+		return errx.WithContext(err, "configure server")
 	}
 	defer svr.Close()
 
@@ -46,18 +43,17 @@ func run() int {
 		MasterAddr:    masterAddr,
 		AdvertiseAddr: svr.Config.AdvertiseAddr,
 		NfsRoot:       nfsRoot.Path,
+		MapTimeout:    mapTimeout,
 	})
 	if err != nil {
-		logx.Err(errx.WithContext(err, "configure service"))
-		return 1
+		return errx.WithContext(err, "configure service")
 	}
 	defer svc.Close()
 
 	initCtx, timeoutInit := context.WithTimeout(ctx, initTimeout)
 	defer timeoutInit()
 	if err = svc.Init(initCtx); err != nil {
-		logx.Err(errx.WithContext(err, "initialize service"))
-		return 1
+		return errx.WithContext(err, "initialize service")
 	}
 
 	rpcv1.RegisterWorkerServiceServer(svr.GrpcServer, svc)
@@ -70,14 +66,10 @@ func run() int {
 	}()
 
 	if err := svr.Serve(ctx); err != nil {
-		logx.Err(errx.WithContext(err, "server exited with error"))
-		if ctxErr, cause := ctx.Err(), context.Cause(ctx); ctxErr != nil && ctxErr != cause {
-			logx.Err(errx.WithContext(err, "cause"))
-		}
-		return 1
+		return errx.WithContext(err, "server exited with error")
 	}
 
-	return 0
+	return nil
 }
 
 func periodicHeartbeat(ctx context.Context, svc *worker.Service, interval time.Duration, timeout time.Duration) error {
@@ -107,6 +99,13 @@ func heartbeatWithTimeout(parent context.Context, svc *worker.Service, timeout t
 }
 
 func main() {
-	prepArguments()
-	os.Exit(run())
+	if err := prepArguments(); err != nil {
+		logx.Err(errx.WithContext(err, "prepare arguments"))
+		os.Exit(1)
+	}
+
+	if err := run(); err != nil {
+		logx.Err(err)
+		os.Exit(1)
+	}
 }

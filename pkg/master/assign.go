@@ -23,7 +23,7 @@ func (s *Service) RunAssignLoop(parent context.Context) error {
 
 		go func() {
 			err = s.doMap(parent, workerKey, taskKey)
-			if err != nil && (!errx.IsContextual(err) || !ctxx.Expired(parent)) {
+			if err != nil && (!errx.IsContextual(err) || !ctxx.Done(parent)) {
 				logx.Warnf("a map task failed: %s", err.Error())
 			}
 		}()
@@ -33,6 +33,7 @@ func (s *Service) RunAssignLoop(parent context.Context) error {
 }
 
 func (s *Service) doMap(parent context.Context, workerKey, taskKey string) (e error) {
+	// TODO worker may still be doing something, this cause the master to storm workers with request while they;re busy
 	defer s.releaseWorker(workerKey)
 	defer func() {
 		if e != nil {

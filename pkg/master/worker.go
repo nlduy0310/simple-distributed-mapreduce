@@ -8,6 +8,7 @@ import (
 
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/client"
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/errx"
+	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/logx"
 	rpcv1 "github.com/nlduy0310/simple-distributed-mapreduce/rpc/v1"
 )
 
@@ -56,6 +57,12 @@ func (w *worker) doMap(ctx context.Context, path string) error {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
+	start := time.Now()
+	defer func() {
+		elapsed := time.Since(start)
+		logx.Debugf("doMap on worker %q took %f seconds", w.addr, elapsed.Seconds())
+	}()
+
 	req := &rpcv1.MapRequest{NfsPath: path}
 	resp, err := w.client.Map(ctx, req)
 	if err != nil {
@@ -63,6 +70,8 @@ func (w *worker) doMap(ctx context.Context, path string) error {
 	} else if !resp.Ok {
 		return errors.New(resp.Reason)
 	}
+
+	logx.Debugf("worker %q successfully mapped %q into %v", w.addr, path, resp.LocalPaths)
 
 	return nil
 }

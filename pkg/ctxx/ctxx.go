@@ -2,6 +2,13 @@ package ctxx
 
 import "context"
 
-func Expired(ctx context.Context) bool {
-	return ctx.Err() != nil
+// Done is a quick wrapper to check if a context's done channel is closed.
+// This function assumes the input is non-nil.
+func Done(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	default:
+		return false
+	}
 }

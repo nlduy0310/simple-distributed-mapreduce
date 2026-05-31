@@ -4,12 +4,9 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/errx"
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/flagx"
-	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/logx"
 )
 
 var (
@@ -24,6 +21,8 @@ var (
 	heartbeatTimeout  time.Duration
 	// nfs
 	nfsRoot = flagx.DirValue{Path: "/mnt/nfs"}
+	// process
+	mapTimeout time.Duration
 )
 
 func parseFlags() {
@@ -35,6 +34,7 @@ func parseFlags() {
 	flag.DurationVar(&heartbeatInterval, "heartbeat-interval", 5*time.Second, "heartbeat interval")
 	flag.DurationVar(&heartbeatTimeout, "heartbeat-timeout", 3*time.Second, "heartbeat timeout")
 	flag.Var(&nfsRoot, "nfs-root", "NFS root directory")
+	flag.DurationVar(&mapTimeout, "map-timeout", 60*time.Second, "timeout duration of map task")
 
 	flag.Parse()
 }
@@ -53,6 +53,8 @@ func validateArguments() error {
 		return invalidDuration("heartbeat timeout")
 	case len(nfsRoot.Path) == 0:
 		return require("NFS root")
+	case mapTimeout <= 0:
+		return invalidDuration("map timeout")
 	default:
 		return nil
 	}
@@ -66,11 +68,7 @@ func require(name string) error {
 	return fmt.Errorf("%s is required", name)
 }
 
-func prepArguments() {
+func prepArguments() error {
 	parseFlags()
-
-	if err := validateArguments(); err != nil {
-		logx.Err(errx.WithContext(err, "validate arguments"))
-		os.Exit(1)
-	}
+	return validateArguments()
 }

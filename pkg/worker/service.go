@@ -2,14 +2,18 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
-	"time"
+	"path/filepath"
+	"sync/atomic"
 
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/client"
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/errx"
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/logx"
+	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/slicex"
 	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/task"
+	"github.com/nlduy0310/simple-distributed-mapreduce/pkg/worker/internal"
 	rpcv1 "github.com/nlduy0310/simple-distributed-mapreduce/rpc/v1"
 )
 
@@ -21,6 +25,7 @@ type Service struct {
 	master rpcv1.MasterServiceClient
 	// states
 	curTask task.Task
+	busy    atomic.Bool
 }
 
 func NewService(cfg Config) (*Service, error) {
@@ -40,24 +45,43 @@ func NewService(cfg Config) (*Service, error) {
 		name = randomName()
 	}
 
-	return &Service{
+	ret := &Service{
 		Config:  cfg,
 		Name:    name,
 		client:  client,
 		master:  master,
 		curTask: task.New(),
-	}, nil
+	}
+	ret.busy.Store(false)
+	return ret, nil
 }
 
 func (s *Service) Ping(context.Context, *rpcv1.PingRequest) (*rpcv1.PingResponse, error) {
 	return &rpcv1.PingResponse{Message: "pong"}, nil
 }
 
-func (s *Service) Map(_ context.Context, req *rpcv1.MapRequest) (*rpcv1.MapResponse, error) {
-	logx.Infof("received task map for %s", req.NfsPath)
-	time.Sleep(time.Duration(rand.Intn(2000)) * time.Millisecond)
-	// TODO start map
-	return &rpcv1.MapResponse{Ok: true}, nil
+func (s *Service) Map(parent context.Context, req *rpcv1.MapRequest) (*rpcv1.MapResponse, error) {
+	if s.busy.Load() {
+		return nil, errors.New("worker is busy")
+	}
+	s.busy.Store(true)
+	defer s.busy.Store(false)
+
+	ctx, cancel := context.WithTimeout(parent, s.Config.MapTimeout)
+	defer cancel()
+
+	logx.Infof("processing task map for %s", req.NfsPath)
+	paths, err := internal.Map(ctx, filepath.Join(s.Config.NfsRoot, req.NfsPath))
+	if err != nil {
+		return nil, err
+	}
+
+	absPaths := slicex.Map(paths, func(p string) string {
+		// TODO handle error
+		absPath, _ := filepath.Abs(p)
+		return absPath
+	})
+	return &rpcv1.MapResponse{Ok: true, LocalPaths: absPaths}, nil
 }
 
 func (s *Service) Init(ctx context.Context) error {
