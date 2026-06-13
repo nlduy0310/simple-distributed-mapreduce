@@ -43,18 +43,16 @@ cmd_help() {
 entry="./cmd/worker"
 bin="./bin/$worker_name"
 rel_nfs_root="mnt/sample"
-opts=(
-    --name $worker_name
-    --port "$worker_port"
-    --advertise-address "localhost:${worker_port}"
-    --master-address "localhost:${MASTER_PORT}"
-    --nfs-root "$(pwd)/${rel_nfs_root}"
-)
+export NAME="$worker_name" \
+    SERVER_PORT="$worker_port" \
+    SERVER_ADVERTISE_ADDR="localhost:$worker_port" \
+    SVC_MASTER_ADDR="localhost:$MASTER_PORT" \
+    NFS_ROOT="$(pwd)/$rel_nfs_root"
 while true; do
     echo "starting server"
 
     go build -o "$bin" "$entry"
-    "$bin" "${opts[@]}" &
+    "$bin" &
     svr_pid=$!
 
     echo "server is running (PID $svr_pid)"
