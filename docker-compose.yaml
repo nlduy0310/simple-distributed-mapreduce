@@ -4,17 +4,12 @@ services:
     build:
       context: .
       dockerfile: build/master/Dockerfile
-    command:
-      - "--port"
-      - "${MASTER_PORT}"
-      - "--advertise-address"
-      - "${MASTER_HOST}:${MASTER_PORT}"
-      - "--healthy-duration"
-      - "10s"
-      - "--nfs-root"
-      - "${NFS_ROOT}"
-      - "--input"
-      - "**/*.txt"
+    environment:
+      - SERVER_PORT=${MASTER_PORT}
+      - SERVER_ADVERTISE_ADDR=${MASTER_HOST}:${MASTER_PORT}
+      - SVC_HEALTHY_DURATION=10s
+      - NFS_ROOT=${NFS_ROOT}
+      - INPUT_PATTERN=**/*.txt
     volumes:
       - ${HOST_IN_DIR}:${NFS_ROOT}:z
 

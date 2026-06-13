@@ -41,14 +41,12 @@ cmd_help() {
 entry="./cmd/master"
 bin="./bin/master"
 rel_nfs_root="mnt/sample"
-opts=(
-    --port "${MASTER_PORT}"
-    --advertise-address "localhost:${MASTER_PORT}"
-    --healthy-duration 10s
-    --nfs-root "$(pwd)/${rel_nfs_root}"
-    --input "**/*.txt"
-    --map-timeout 5s
-)
+export SERVER_PORT="$MASTER_PORT" \
+    SERVER_ADVERTISE_ADDR="localhost:$MASTER_PORT" \
+    SVC_HEALTHY_DURATION=10s \
+    NFS_ROOT="$(pwd)/${rel_nfs_root}" \
+    INPUT_PATTERN="**/*.txt" \
+    SVC_MAP_TIMEOUT=5s
 while true; do
     echo "starting server"
 
