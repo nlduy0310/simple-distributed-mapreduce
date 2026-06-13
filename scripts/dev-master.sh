@@ -51,7 +51,7 @@ while true; do
     echo "starting server"
 
     go build -o "$bin" "$entry"
-    "$bin" "${opts[@]}" &
+    "$bin" &
     svr_pid=$!
 
     echo "server is running (PID $svr_pid)"
